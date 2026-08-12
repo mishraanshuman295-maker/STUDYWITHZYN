@@ -87,22 +87,36 @@
     return saveState(state);
   }
 
+  // Local date (YYYY-MM-DD) — IST / any timezone correct
+  function getLocalDateString(d = new Date()) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   function recordActivity(profile) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateString(); // Local timezone (IST ke liye sahi)
     if (profile.streak.lastDate === today) return profile;
 
     if (profile.streak.lastDate) {
-      const last = new Date(profile.streak.lastDate);
-      const diff = Math.floor((new Date(today) - last) / (1000 * 60 * 60 * 24));
+      // Parse as local dates to avoid timezone shift
+      const [ly, lm, ld] = profile.streak.lastDate.split("-").map(Number);
+      const last = new Date(ly, lm - 1, ld);
+      const [ty, tm, td] = today.split("-").map(Number);
+      const now = new Date(ty, tm - 1, td);
+      const diff = Math.round((now - last) / (1000 * 60 * 60 * 24));
+
       if (diff === 1) {
         profile.streak.current += 1;
       } else if (diff > 1) {
         profile.streak.current = 1;
       }
+      // diff === 0 already handled above
     } else {
       profile.streak.current = 1;
     }
-    profile.streak.best = Math.max(profile.streak.best, profile.streak.current);
+    profile.streak.best = Math.max(profile.streak.best || 0, profile.streak.current);
     profile.streak.lastDate = today;
     return profile;
   }
